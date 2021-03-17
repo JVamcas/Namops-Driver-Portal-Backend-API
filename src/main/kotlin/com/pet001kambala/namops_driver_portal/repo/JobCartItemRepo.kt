@@ -15,12 +15,13 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
                 val strqry = "SELECT * FROM jobcarditem where containerno=:containerNo"
-                val data = session!!.createNativeQuery(strqry, Driver::class.java)
+                val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .setParameter("containerNo", containerNo)
                     .resultList.filterNotNull()
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
             }
         } catch (e: Exception) {
+            e.printStackTrace()
             Results.Error(e)
         } finally {
             session?.close()
@@ -33,7 +34,7 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
                 val strqry = "SELECT * FROM jobcarditem where iscompleted=false"
-                val data = session!!.createNativeQuery(strqry, Driver::class.java)
+                val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .resultList.filterNotNull()
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
             }

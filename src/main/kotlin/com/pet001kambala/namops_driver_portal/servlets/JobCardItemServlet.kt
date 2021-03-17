@@ -33,6 +33,7 @@ class JobCardItemServlet : HttpServlet() {
                                 else "{data: \"\"}"
                             )
                         }
+                        else resp.writer.println("{Err: ${(result as Results.Error).code.name}!}")
                     } catch (e: Exception) {
                         out.println("Err: ${e.message}")
                     }
@@ -50,7 +51,7 @@ class JobCardItemServlet : HttpServlet() {
                                     "{data: ${data.toJson()}}"
                                 else "{data: \"\"}"
                             )
-                        }
+                        } else resp.writer.println("{Err: ${(result as Results.Error).code.name}!}")
                     } catch (e: Exception) {
                         out.println("Err: ${e.message}")
                     }

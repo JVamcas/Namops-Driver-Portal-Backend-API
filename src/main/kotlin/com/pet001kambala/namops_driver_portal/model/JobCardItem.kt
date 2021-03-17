@@ -16,7 +16,7 @@ class JobCardItem
     var id: Int? = null
 
     @Column(name = "jobCardNo", nullable = false)
-    val jobCardNo: Int? = null
+    val jobCardNo: String? = null
 
     @Column(name = "containerNo", nullable = false)
     val containerNo: String? = null
@@ -27,11 +27,11 @@ class JobCardItem
     @Column(name = "isFull", nullable = false)
     val isFull: Boolean = false
 
-    @Column(name = "customerRef", nullable = false)
+    @Column(name = "customerRef", nullable = true)
     val customerRef: String? = null
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "driverId", nullable = true)
+    @JoinColumn(name = "driverId", nullable = false)
     var driver: Driver? = null
 
     @Column(name = "isCompleted", nullable = false)
