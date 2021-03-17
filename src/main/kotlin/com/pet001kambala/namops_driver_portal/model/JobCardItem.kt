@@ -31,13 +31,13 @@ class JobCardItem
     val customerRef: String? = null
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "driverId", nullable = false)
+    @JoinColumn(name = "driverId", nullable = true)
     var driver: Driver? = null
 
     @Column(name = "isCompleted", nullable = false)
     val isCompleted: Boolean = false // whether or not the job card item is completed so as not to include it again.
 
-    @Column(name = "designatePickUpDate", nullable = false)
+    @Column(name = "designatedPickUpDate", nullable = false)
     var designatePickUpDate: LocalDateTime? = null
 
     @Column(name = "useBison", nullable = false)
