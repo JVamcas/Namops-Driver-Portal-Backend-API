@@ -42,10 +42,10 @@ class Trip{
     /** trip start info end **/
 
     /** container weighing info start **/
-    @Column(name = "useBison", nullable = false)
+    @Column(name = "ysnUseBison", nullable = false)
     var useBison: Boolean = false /*whether or not merchandise will be weigh by bison*/
 
-    @Column(name = "useWeighBridge", nullable = false)
+    @Column(name = "ysnUseWeighBridge", nullable = false)
     var useWeighBridge: Boolean = false /*whether or not merch will be weigh at the weighbridge*/
 
     @Column(name = "dateWeightBridgeEmpty", nullable = true)
@@ -63,7 +63,7 @@ class Trip{
     /** container weighing info end **/
 
     /** container scanning info start **/
-    @Column(name = "scanContainer", nullable = false)
+    @Column(name = "ysnScanContainer", nullable = false)
     var scanContainer: Boolean = false /*whether or not the container must be thermally scanned*/
 
     @Column(name = "containerScanDate", nullable = true)

@@ -1,6 +1,5 @@
 package com.pet001kambala.namops_driver_portal.repo
 
-import com.pet001kambala.namops_driver_portal.model.Driver
 import com.pet001kambala.namops_driver_portal.model.JobCardItem
 import com.pet001kambala.namops_driver_portal.utils.Results
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +32,7 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
         return try {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
-                val strqry = "SELECT * FROM jobcarditem where iscompleted=false"
+                val strqry = "SELECT * FROM jobcarditem where jobCardCompleted=false"
                 val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .resultList.filterNotNull()
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)

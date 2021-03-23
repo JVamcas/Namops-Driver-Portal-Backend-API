@@ -23,15 +23,15 @@ class DriverServlet : HttpServlet() {
                 val results = DriverRepo().findDriverByPassCode(passcode)
                 if (results is Results.Success<*>) {
                     val data = results.data as List<Driver>
-                    resp.contentType = "json"
-                    resp.writer.println(
+                    resp.contentType = "application/json"
+                    resp.writer.print(
                         if (data.isNotEmpty())
                             "{data: ${data[0].toJson()}}"
                         else "{data: \"\"}"
                     )
-                } else resp.writer.println("{Err: Server error!}")
+                } else resp.writer.print("{Err: \"Server error!\"}")
             } catch (e: Exception) {
-                resp.writer.println("{Err: ${e.message}}")
+                resp.writer.print("{Err: \"${e.message}\"}")
             }
         }
     }

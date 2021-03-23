@@ -34,10 +34,10 @@ class JobCardItem
     @JoinColumn(name = "driverId", nullable = false)
     var driver: Driver? = null
 
-    @Column(name = "isCompleted", nullable = false)
-    val isCompleted: Boolean = false // whether or not the job card item is completed so as not to include it again.
+    @Column(name = "wasPickepUp", nullable = false)
+    val wasPickedUp: Boolean = false // whether or not the job card item is completed so as not to include it again.
 
-    @Column(name = "designatedPickUpDate", nullable = false)
+    @Column(name = "designatedPickUpDate", nullable = true)
     var designatePickUpDate: LocalDateTime? = null
 
     @Column(name = "useBison", nullable = false)
@@ -48,5 +48,11 @@ class JobCardItem
 
     @Column(name = "scanContainer", nullable = false)
     var scanContainer: Boolean = false /*whether or not the container must be thermally scanned*/
+
+    @Column(name = "pickUpLocationName", nullable = true)
+    var pickUpLocationName: String? = null /*whether or not the container must be thermally scanned*/
+
+    @Column(name = "jobCardCompleted", nullable = false)
+    var jobCardCompleted: Boolean = false
 
 }

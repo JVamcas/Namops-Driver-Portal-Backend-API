@@ -19,7 +19,7 @@ abstract class AbstractRepo<T> {
                 val transaction = session!!.beginTransaction()
                 session!!.persist(model)
                 transaction.commit()
-                Results.Success<T>(code = Results.Success.CODE.WRITE_SUCCESS)
+                Results.Success(data = model,code = Results.Success.CODE.WRITE_SUCCESS)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -39,9 +39,10 @@ abstract class AbstractRepo<T> {
                 val transaction = session!!.beginTransaction()
                 session!!.update(model)
                 transaction.commit()
-                Results.Success<T>(code = Results.Success.CODE.WRITE_SUCCESS)
+                Results.Success(data = model,code = Results.Success.CODE.WRITE_SUCCESS)
             }
         } catch (e: Exception) {
+            e.printStackTrace()
             session?.transaction?.rollback()
             Results.Error(e)
         }

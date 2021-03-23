@@ -1,6 +1,8 @@
 package com.pet001kambala.namops_driver_portal.servlets
 
+import com.pet001kambala.namops_driver_portal.model.Driver
 import com.pet001kambala.namops_driver_portal.model.JobCardItem
+import com.pet001kambala.namops_driver_portal.repo.DriverRepo
 import com.pet001kambala.namops_driver_portal.repo.JobCartItemRepo
 import com.pet001kambala.namops_driver_portal.utils.ParseUtil.Companion.toJson
 import com.pet001kambala.namops_driver_portal.utils.Results
@@ -10,56 +12,62 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "JobCardCardItem", value = ["/job-card-by-container", "/all-job-cards"])
+@WebServlet(name = "JobCardCardItem", value = ["/job_card_by_container", "/all_job_cards"])
 class JobCardItemServlet : HttpServlet() {
 
     public override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val out = resp.writer
-        val uri = req.requestURI.substring(req.contextPath.length)
-        var result: Results
+        try {
+            runBlocking {
+                val uri = req.requestURI.substring(req.contextPath.length)
+                val result: Results
+                val passcode = req.getParameter("passcode")
+                val results = DriverRepo().findDriverByPassCode(passcode)
+                if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
+                    when (uri) {
+                        "/job_card_by_container" -> {
+                            val containerNo = req.getParameter("containerNo")
 
-        when (uri) {
-            "/job-card-by-container" -> {
-                val containerNo = req.getParameter("containerNo")
-                runBlocking {
-                    try {
-                        result = JobCartItemRepo().findJobCardItemByContainerNumber(containerNo)
-                        if (result is Results.Success<*>) {
-                            val data = (result as Results.Success<*>).data as List<JobCardItem>
-                            resp.contentType = "json"
-                            out.println(
-                                if (data.isNotEmpty())
-                                    "{data: ${data[0].toJson()}}"
-                                else "{data: \"\"}"
-                            )
+                            try {
+                                result = JobCartItemRepo().findJobCardItemByContainerNumber(containerNo)
+                                if (result is Results.Success<*>) {
+                                    val data = result.data as List<JobCardItem>
+                                    resp.contentType = "application/json"
+                                    out.print(
+                                        if (data.isNotEmpty())
+                                            data[0].toJson()
+                                        else ""
+                                    )
+                                } else resp.writer.println("{Err: \"${(result as Results.Error).code.name}!\"}")
+                            } catch (e: Exception) {
+                                out.print("Err: \"${e.message}\"")
+                            }
                         }
-                        else resp.writer.println("{Err: ${(result as Results.Error).code.name}!}")
-                    } catch (e: Exception) {
-                        out.println("Err: ${e.message}")
+
+                        "/all_job_cards" -> {
+                            try {
+                                result = JobCartItemRepo().loadAllInCompleteJobCardItems()
+                                if (result is Results.Success<*>) {
+                                    val data = result.data as List<JobCardItem>
+                                    resp.contentType = "application/json"
+                                    out.print(
+                                        if (data.isNotEmpty())
+                                            data.toJson()
+                                        else ""
+                                    )
+                                } else resp.writer.print("{Err: ${(result as Results.Error).code.name}!}")
+                            } catch (e: Exception) {
+                                out.print("Err: ${e.message}")
+                            }
+                        }
+                        else -> {
+                            out.print("Err: \"No Resource\"")
+                        }
                     }
-                }
+                } else out.print("{Err: \"Invalid Auth.\"}")
             }
-            "/all-job-cards" -> {
-                runBlocking {
-                    try {
-                        result = JobCartItemRepo().loadAllInCompleteJobCardItems()
-                        if (result is Results.Success<*>) {
-                            val data = (result as Results.Success<*>).data as List<JobCardItem>
-                            resp.contentType = "json"
-                            out.println(
-                                if (data.isNotEmpty())
-                                    "{data: ${data.toJson()}}"
-                                else "{data: \"\"}"
-                            )
-                        } else resp.writer.println("{Err: ${(result as Results.Error).code.name}!}")
-                    } catch (e: Exception) {
-                        out.println("Err: ${e.message}")
-                    }
-                }
-            }
-            else -> {
-                out.println("Err: Do not know you! $uri")
-            }
+        } catch (e: Exception) {
+            out.print("{Err: \"Server Error!}\"")
         }
     }
 }

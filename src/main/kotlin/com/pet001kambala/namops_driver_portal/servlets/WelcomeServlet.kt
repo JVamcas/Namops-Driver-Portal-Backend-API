@@ -6,10 +6,10 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet(name="welcome", value=["/"])
-class TestServlet: HttpServlet() {
+class WelcomeServlet: HttpServlet() {
 
     public override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
 
-        resp.writer.println("What do you want?")
+        resp.writer.print("What do you want?")
     }
 }
