@@ -5,6 +5,7 @@ import com.pet001kambala.namops_driver_portal.utils.Results
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.hibernate.Session
+import org.hibernate.Transaction
 
 class JobCartItemRepo : AbstractRepo<JobCardItem>() {
 
@@ -38,6 +39,29 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
             }
         } catch (e: Exception) {
+            Results.Error(e)
+        } finally {
+            session?.close()
+        }
+    }
+
+
+
+    suspend fun batchUpdate(transactions: List<JobCardItem>): Results {
+        var trans: Transaction? = null
+        var session: Session? = null
+        return try {
+            withContext(Dispatchers.Default) {
+                session = sessionFactory?.openSession()
+                trans = session?.beginTransaction()
+                transactions.forEach {
+                    session?.update(it)
+                }
+                trans?.commit()
+                Results.Success<JobCardItem>(code = Results.Success.CODE.UPDATE_SUCCESS)
+            }
+        } catch (e: Exception) {
+            trans?.rollback()
             Results.Error(e)
         } finally {
             session?.close()

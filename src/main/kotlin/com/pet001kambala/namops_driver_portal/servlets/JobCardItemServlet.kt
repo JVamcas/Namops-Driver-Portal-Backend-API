@@ -4,6 +4,7 @@ import com.pet001kambala.namops_driver_portal.model.Driver
 import com.pet001kambala.namops_driver_portal.model.JobCardItem
 import com.pet001kambala.namops_driver_portal.repo.DriverRepo
 import com.pet001kambala.namops_driver_portal.repo.JobCartItemRepo
+import com.pet001kambala.namops_driver_portal.utils.ParseUtil.Companion.convert
 import com.pet001kambala.namops_driver_portal.utils.ParseUtil.Companion.toJson
 import com.pet001kambala.namops_driver_portal.utils.Results
 import kotlinx.coroutines.runBlocking
@@ -12,7 +13,7 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "JobCardCardItem", value = ["/job_card_by_container", "/all_job_cards"])
+@WebServlet(name = "JobCardCardItem", value = ["/job_card_by_container", "/all_job_cards", "/job_card_item_update"])
 class JobCardItemServlet : HttpServlet() {
 
     public override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
@@ -68,6 +69,40 @@ class JobCardItemServlet : HttpServlet() {
             }
         } catch (e: Exception) {
             out.print("{Err: \"Server Error!}\"")
+        }
+    }
+
+    public override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+        super.doPost(req, resp)
+        val out = resp.writer
+
+        try {
+            val passcode = req.getParameter("passcode")
+            val jobcardItems = req.getParameter("job_card_item_list")
+
+            val uri = req.requestURI.substring(req.contextPath.length)
+            var result: Results
+            resp.contentType = "application/json"
+
+            runBlocking {
+                val results = DriverRepo().findDriverByPassCode(passcode)
+                if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
+                    when (uri) {
+                        "/job_card_item_update" -> {
+                            val jobCardItemList = jobcardItems.convert<List<JobCardItem>>()
+
+                            val loadJobCardItemResults = JobCartItemRepo().batchUpdate(jobCardItemList)
+                            if (loadJobCardItemResults is Results.Success<*>)
+                                out.print("{Status:\"Success\"}")
+                            else
+                                out.print("{Status: \"Server Error\"}")
+                        }
+                    }
+                } else out.print("{Status: \"Invalid Auth.\"}")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            out.print("{Status: \"Server Error!\"}")
         }
     }
 }

@@ -46,6 +46,8 @@ class TripServlet : HttpServlet() {
         try {
             val passcode = req.getParameter("passcode")
             val jsonTrip = req.getParameter("trip")
+            val jobCardList = req.getParameter("job_card_items")
+
             val uri = req.requestURI.substring(req.contextPath.length)
             var result: Results
             runBlocking {
@@ -61,6 +63,8 @@ class TripServlet : HttpServlet() {
                             else out.print("{Status: \"Server Error\"}")
                         }
                         "/trip_update" -> {
+
+                            //TODO need to update the jobcard items was [pickedup] and [jobCardCompleted]
 
                             val trip = jsonTrip.convert<Trip>()
                             result = repo.updateModel(trip)

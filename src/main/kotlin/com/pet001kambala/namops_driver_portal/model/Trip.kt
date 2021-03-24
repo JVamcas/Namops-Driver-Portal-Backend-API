@@ -122,6 +122,9 @@ class Trip{
     @Column(name = "dropOffLocationName", nullable = true)
     var dropOffLocationName: String? = null
 
+    @Column(name = "dropOffDate", nullable = true)
+    var dropOffDate: LocalDateTime? = null
+
     @Column(name = "memNotes", nullable = true)
     var memNotes: String? = null
 
@@ -131,5 +134,5 @@ class Trip{
 }
 
 enum class TripStatus {
-    START, WEIGH_EMPTY, PICK_UP, WEIGH_FULL, BISON, DROP_OFF
+    START, WEIGH_EMPTY, PICK_UP, WEIGH_FULL, BISON, DROP_OFF, COMPLETED
 }
