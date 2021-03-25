@@ -46,7 +46,6 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
     }
 
 
-
     suspend fun batchUpdate(transactions: List<JobCardItem>): Results {
         var trans: Transaction? = null
         var session: Session? = null
@@ -66,5 +65,35 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
         } finally {
             session?.close()
         }
+    }
+
+    suspend fun batchUpdate(wasPickedUp: Boolean, jobCardComplete: Boolean, jobCardItems: List<JobCardItem>): Results {
+        var session: Session? = null
+        var trans : Transaction? = null
+
+        return try {
+            withContext(Dispatchers.Default) {
+                session = sessionFactory!!.openSession()
+                trans = session!!.beginTransaction()
+
+                val strqry = "UPDATE jobcarditem j set j.wasPickepUp=:wasPickedUp, j.jobCardCompleted=:jobCardComplete WHERE j.jobCardNo=:jobCardNo and j.containerNo in(:list)"
+                val jobCardNo = jobCardItems.first().jobCardNo
+
+                val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
+                    .setParameter("list", jobCardItems.mapNotNull { it.containerNo }.toList())
+                    .setParameter("wasPickedUp",wasPickedUp)
+                    .setParameter("jobCardComplete",jobCardComplete)
+                    .setParameter("jobCardNo",jobCardNo).executeUpdate()
+                trans!!.commit()
+
+                Results.Success(data = data, code = Results.Success.CODE.UPDATE_SUCCESS)
+            }
+        } catch (e: Exception) {
+            trans?.rollback()
+            Results.Error(e)
+        } finally {
+            session?.close()
+        }
+
     }
 }

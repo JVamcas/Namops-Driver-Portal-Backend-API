@@ -78,10 +78,9 @@ class JobCardItemServlet : HttpServlet() {
 
         try {
             val passcode = req.getParameter("passcode")
-            val jobcardItems = req.getParameter("job_card_item_list")
+            val jobCardItems = req.getParameter("job_card_items")
 
             val uri = req.requestURI.substring(req.contextPath.length)
-            var result: Results
             resp.contentType = "application/json"
 
             runBlocking {
@@ -89,7 +88,7 @@ class JobCardItemServlet : HttpServlet() {
                 if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
                     when (uri) {
                         "/job_card_item_update" -> {
-                            val jobCardItemList = jobcardItems.convert<List<JobCardItem>>()
+                            val jobCardItemList = jobCardItems.convert<List<JobCardItem>>()
 
                             val loadJobCardItemResults = JobCartItemRepo().batchUpdate(jobCardItemList)
                             if (loadJobCardItemResults is Results.Success<*>)

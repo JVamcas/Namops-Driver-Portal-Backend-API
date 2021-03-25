@@ -1,8 +1,10 @@
 package com.pet001kambala.namops_driver_portal.servlets
 
 import com.pet001kambala.namops_driver_portal.model.Driver
+import com.pet001kambala.namops_driver_portal.model.JobCardItem
 import com.pet001kambala.namops_driver_portal.model.Trip
 import com.pet001kambala.namops_driver_portal.repo.DriverRepo
+import com.pet001kambala.namops_driver_portal.repo.JobCartItemRepo
 import com.pet001kambala.namops_driver_portal.repo.TripRepo
 import com.pet001kambala.namops_driver_portal.utils.ParseUtil.Companion.convert
 import com.pet001kambala.namops_driver_portal.utils.ParseUtil.Companion.toJson
@@ -42,33 +44,49 @@ class TripServlet : HttpServlet() {
 
     public override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val out = resp.writer
-
+        resp.contentType = "application/json"
         try {
             val passcode = req.getParameter("passcode")
             val jsonTrip = req.getParameter("trip")
-            val jobCardList = req.getParameter("job_card_items")
+            val jsonJobCardItems = req.getParameter("job_card_items")
+            val wasPickedUp = req.getParameter("wasPickedUp")?.toBoolean() ?: false
+            val jobCardComplete = req.getParameter("jobCardComplete")?.toBoolean() ?: false
+
 
             val uri = req.requestURI.substring(req.contextPath.length)
-            var result: Results
+
             runBlocking {
-                val results = DriverRepo().findDriverByPassCode(passcode)
-                if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
+                var result = DriverRepo().findDriverByPassCode(passcode)
+                if (result is Results.Success<*> && !(result.data as? ArrayList<Driver>).isNullOrEmpty()) {
                     when (uri) {
                         "/trip" -> {
                             val trip = jsonTrip.convert<Trip>()
                             result = repo.addNewModel(trip)
-                            resp.contentType = "application/json"
                             if (result is Results.Success<*>)
                                 out.print("{Status:\"Success\", data: ${(result as Results.Success<*>).data.toJson()}}")
                             else out.print("{Status: \"Server Error\"}")
                         }
                         "/trip_update" -> {
 
-                            //TODO need to update the jobcard items was [pickedup] and [jobCardCompleted]
+                            //update jobCardItems was picked up or jobCard complete
+
+                            jsonJobCardItems?.let {
+                                val jobCardItemList = jsonJobCardItems.convert<List<JobCardItem>>()
+
+                                val loadJobCardItemResults =
+                                    JobCartItemRepo().batchUpdate(
+                                        wasPickedUp = wasPickedUp,
+                                        jobCardComplete = jobCardComplete,
+                                        jobCardItems = jobCardItemList
+                                    )
+                                if (loadJobCardItemResults is Results.Error) {
+                                    out.print("{Status: \"Server Error\"}")
+                                    return@runBlocking //quit whole op if error occurred
+                                }
+                            }
 
                             val trip = jsonTrip.convert<Trip>()
                             result = repo.updateModel(trip)
-                            resp.contentType = "application/json"
                             if (result is Results.Success<*>)
                                 out.print("{Status:\"Success\",data: ${(result as Results.Success<*>).data.toJson()}}")
                             else out.print("{Status: \"Server Error\"}")
