@@ -55,4 +55,7 @@ class JobCardItem
     @Column(name = "jobCardCompleted", nullable = false)
     var jobCardCompleted: Boolean = false
 
+    @Column(name = "weighBridgeName", nullable = true)
+    var weighBridgeName: Boolean = false
+
 }

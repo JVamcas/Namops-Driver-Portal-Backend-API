@@ -28,12 +28,32 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
         }
     }
 
+    suspend fun findJobCardItemByJobCardNo(jobCardNo: String): Results {
+        var session: Session? = null
+        return try {
+            withContext(Dispatchers.Default) {
+                session = sessionFactory!!.openSession()
+                val strqry = "SELECT * FROM jobcarditem where jobCardNo=:jobCardNo"
+                val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
+                    .setParameter("jobCardNo", jobCardNo)
+                    .resultList.filterNotNull()
+                Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Results.Error(e)
+        } finally {
+            session?.close()
+        }
+    }
+
+
     suspend fun loadAllInCompleteJobCardItems(): Results {
         var session: Session? = null
         return try {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
-                val strqry = "SELECT * FROM jobcarditem where jobCardCompleted=false"
+                val strqry = "SELECT * FROM jobcarditem where jobCardCompleted=false "
                 val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .resultList.filterNotNull()
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
@@ -69,24 +89,32 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
 
     suspend fun batchUpdate(wasPickedUp: Boolean, jobCardComplete: Boolean, jobCardItems: List<JobCardItem>): Results {
         var session: Session? = null
-        var trans : Transaction? = null
+        var trans: Transaction? = null
 
         return try {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
                 trans = session!!.beginTransaction()
 
-                val strqry = "UPDATE jobcarditem j set j.wasPickepUp=:wasPickedUp, j.jobCardCompleted=:jobCardComplete WHERE j.jobCardNo=:jobCardNo and j.containerNo in(:list)"
+                val strqry =
+                    "UPDATE jobcarditem j set j.wasPickepUp=:wasPickedUp WHERE j.jobCardNo=:jobCardNo and j.containerNo in(:list)"
+                val strWer =
+                    "update jobcarditem as card,(select t.wasPickepUp from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
+                            "set card.jobCardCompleted=(IF(false in(temp.wasPickepUp),false,true)) where card.jobCardNo=:jobCardNo"
+
                 val jobCardNo = jobCardItems.first().jobCardNo
 
-                val data = session!!.createNativeQuery(strqry, JobCardItem::class.java)
+                session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .setParameter("list", jobCardItems.mapNotNull { it.containerNo }.toList())
-                    .setParameter("wasPickedUp",wasPickedUp)
-                    .setParameter("jobCardComplete",jobCardComplete)
-                    .setParameter("jobCardNo",jobCardNo).executeUpdate()
+                    .setParameter("wasPickedUp", wasPickedUp)
+                    .setParameter("jobCardNo", jobCardNo).executeUpdate()
+
+                session!!.createNativeQuery(strWer, JobCardItem::class.java)
+                    .setParameter("jobCardNo",jobCardNo)
+
                 trans!!.commit()
 
-                Results.Success(data = data, code = Results.Success.CODE.UPDATE_SUCCESS)
+                Results.Success<JobCardItem>(code = Results.Success.CODE.UPDATE_SUCCESS)
             }
         } catch (e: Exception) {
             trans?.rollback()
@@ -94,6 +122,5 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
         } finally {
             session?.close()
         }
-
     }
 }
