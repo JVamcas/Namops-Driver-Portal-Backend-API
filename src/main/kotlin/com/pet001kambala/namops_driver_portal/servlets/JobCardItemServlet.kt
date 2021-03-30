@@ -23,7 +23,9 @@ class JobCardItemServlet : HttpServlet() {
                 val uri = req.requestURI.substring(req.contextPath.length)
                 val result: Results
                 val passcode = req.getParameter("passcode")
-                val results = DriverRepo().findDriverByPassCode(passcode)
+                val surname = req.getParameter("surname")
+                val results = DriverRepo().findDriver(surname = surname,passcode = passcode)
+
                 if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
                     when (uri) {
                         "/job_card_by_container" -> {
@@ -39,9 +41,9 @@ class JobCardItemServlet : HttpServlet() {
                                             data[0].toJson()
                                         else ""
                                     )
-                                } else resp.writer.println("{Err: \"${(result as Results.Error).code.name}!\"}")
+                                } else resp.writer.println("{Status: \"${(result as Results.Error).code.name}\"}")
                             } catch (e: Exception) {
-                                out.print("Err: \"${e.message}\"")
+                                out.print("{Status: \"${e.message}\"}")
                             }
                         }
 
@@ -51,24 +53,24 @@ class JobCardItemServlet : HttpServlet() {
                                 if (result is Results.Success<*>) {
                                     val data = result.data as List<JobCardItem>
                                     resp.contentType = "application/json"
-                                    out.print(
-                                        if (data.isNotEmpty())
-                                            data.toJson()
-                                        else ""
-                                    )
-                                } else resp.writer.print("{Err: ${(result as Results.Error).code.name}!}")
+                                    val dataPayload =  if (data.isNotEmpty())
+                                        data.toJson()
+                                    else "\"\""
+                                    out.print("{Status: \"Success\", data: $dataPayload}")
+
+                                } else resp.writer.print("{Status: \"${(result as Results.Error).code.name}\"}")
                             } catch (e: Exception) {
-                                out.print("Err: ${e.message}")
+                                out.print("{Status: \"${e.message}\"}")
                             }
                         }
                         else -> {
-                            out.print("Err: \"No Resource\"")
+                            out.print("{Status: \"No Data\"}")
                         }
                     }
-                } else out.print("{Err: \"Invalid Auth.\"}")
+                } else out.print("{Status: \"Invalid Auth\"}")
             }
         } catch (e: Exception) {
-            out.print("{Err: \"Server Error!}\"")
+            out.print("{Status: \"Server Error\"}")
         }
     }
 
@@ -84,7 +86,9 @@ class JobCardItemServlet : HttpServlet() {
             resp.contentType = "application/json"
 
             runBlocking {
-                val results = DriverRepo().findDriverByPassCode(passcode)
+                val passcode = req.getParameter("passcode")
+                val surname = req.getParameter("surname")
+                val results = DriverRepo().findDriver(surname = surname,passcode = passcode)
                 if (results is Results.Success<*> && !(results.data as? ArrayList<Driver>).isNullOrEmpty()) {
                     when (uri) {
                         "/job_card_item_update" -> {
@@ -97,11 +101,11 @@ class JobCardItemServlet : HttpServlet() {
                                 out.print("{Status: \"Server Error\"}")
                         }
                     }
-                } else out.print("{Status: \"Invalid Auth.\"}")
+                } else out.print("{Status: \"Invalid Auth\"}")
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            out.print("{Status: \"Server Error!\"}")
+            out.print("{Status: \"Server Error\"}")
         }
     }
 }

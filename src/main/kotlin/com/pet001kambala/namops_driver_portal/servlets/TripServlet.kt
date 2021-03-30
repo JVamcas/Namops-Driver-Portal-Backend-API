@@ -15,30 +15,42 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "Trips", value = ["/trip", "/trip_update"])
+@WebServlet(name = "Trips", value = ["/trip", "/trip_update", "/recent_incomplete_trip"])
 class TripServlet : HttpServlet() {
 
     private var repo: TripRepo = TripRepo()
     public override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
 
+        resp.contentType = "application/json"
         val out = resp.writer
-        try {
-            val tripId = req.getParameter("tripId")
-            runBlocking {
-                val results = repo.findTrip(tripId.toInt())
-                if (results is Results.Success<*>) {
-                    val data = results.data as List<Trip>
-                    resp.contentType = "application/json"
-                    resp.writer.print(
-                        if (data.isNotEmpty())
-                            "{Status:\"Success\",data: ${data[0].toJson()}}"
-                        else "{Status: \"Error\"}"
-                    )
-                } else resp.writer.print("{Err: \"Server error!\"}")
-            }
 
+        try {
+            val passcode = req.getParameter("passcode")
+            val surname = req.getParameter("surname")
+            val uri = req.requestURI.substring(req.contextPath.length)
+            runBlocking {
+                var result = DriverRepo().findDriver(surname = surname, passcode = passcode)
+                if (result is Results.Success<*> && !(result.data as? ArrayList<Driver>).isNullOrEmpty()) {
+                    when (uri) {
+                        "/recent_incomplete_trip" -> {
+                            val driver = (result.data as? ArrayList<Driver>)?.get(0)
+                            result = repo.loadDriverRecentTrip(driverId = driver?.id!!)
+                            if (result is Results.Success<*>) {
+                                val data = result.data as ArrayList<Trip>
+                                if (!data.isNullOrEmpty())
+                                    out.print("{Status:\"Success\",data:${data[0].toJson()}}")
+                                else out.print("{Status: \"No Data\"}")
+                            } else out.print("{Status: \"Server Error\"}")
+                        }
+                        else -> out.print("{Status: \"Invalid path\"}")
+                    }
+
+                } else {
+                    out.print("{Status: \"Invalid Auth\"}")
+                }
+            }
         } catch (e: Exception) {
-            out.print("{Err: \"Server Error!\"}")
+            out.print("{Err: \"Server Error\"}")
         }
     }
 
@@ -47,16 +59,16 @@ class TripServlet : HttpServlet() {
         resp.contentType = "application/json"
         try {
             val passcode = req.getParameter("passcode")
+            val surname = req.getParameter("surname")
             val jsonTrip = req.getParameter("trip")
             val jsonJobCardItems = req.getParameter("job_card_items")
             val wasPickedUp = req.getParameter("wasPickedUp")?.toBoolean() ?: false
             val jobCardComplete = req.getParameter("jobCardComplete")?.toBoolean() ?: false
 
-
             val uri = req.requestURI.substring(req.contextPath.length)
 
             runBlocking {
-                var result = DriverRepo().findDriverByPassCode(passcode)
+                var result = DriverRepo().findDriver(surname = surname, passcode = passcode)
                 if (result is Results.Success<*> && !(result.data as? ArrayList<Driver>).isNullOrEmpty()) {
                     when (uri) {
                         "/trip" -> {
@@ -86,20 +98,22 @@ class TripServlet : HttpServlet() {
                             }
 
                             val trip = jsonTrip.convert<Trip>()
-                            result = repo.updateModel(trip)
+
+                            result = if (trip.id == null) repo.addNewModel(trip) else repo.updateModel(trip)
+
                             if (result is Results.Success<*>)
-                                out.print("{Status:\"Success\",data: ${(result as Results.Success<*>).data.toJson()}}")
+                                out.print("{Status:\"Success\",data: ${result.data.toJson()}}")
                             else out.print("{Status: \"Server Error\"}")
                         }
                         else -> {
                             out.print("{Status: \"Invalid path\"}")
                         }
                     }
-                } else out.print("{Status: \"Invalid Auth.\"}")
+                } else out.print("{Status: \"Invalid Auth\"}")
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            out.print("{Status: \"Server Error!\"}")
+            out.print("{Status: \"Server Error\"}")
         }
     }
 

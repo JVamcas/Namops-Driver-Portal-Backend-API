@@ -56,6 +56,13 @@ class JobCardItem
     var jobCardCompleted: Boolean = false
 
     @Column(name = "weighBridgeName", nullable = true)
-    var weighBridgeName: Boolean = false
+    var weighBridgeName: String? = null
+
+    @Column(name="jobLog")
+    var jobLog: Int? = null
+
+    @Column(name="lngAgent")
+    var lngAgent: Int? = null
+
 
 }

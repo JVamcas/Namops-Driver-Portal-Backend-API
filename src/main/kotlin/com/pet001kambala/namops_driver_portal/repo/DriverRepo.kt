@@ -8,14 +8,15 @@ import org.hibernate.Session
 
 class DriverRepo : AbstractRepo<Driver>() {
 
-    suspend fun findDriverByPassCode(code: String): Results {
+    suspend fun findDriver(surname: String, passcode: String): Results {
         var session: Session? = null
         return try {
             withContext(Dispatchers.Default) {
                 session = sessionFactory!!.openSession()
-                val strqry = "SELECT * FROM driver where passcode=:code"
+                val strqry = "SELECT * FROM driver where passcode=:passcode and surname=:surname"
                 val data = session!!.createNativeQuery(strqry, Driver::class.java)
-                    .setParameter("code", code)
+                    .setParameter("passcode", passcode)
+                    .setParameter("surname",surname)
                     .resultList.filterNotNull()
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
             }
