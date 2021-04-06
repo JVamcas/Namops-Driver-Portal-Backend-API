@@ -5,6 +5,7 @@ import com.pet001kambala.namops_driver_portal.utils.Results
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.hibernate.Session
+import org.hibernate.Transaction
 
 class TripRepo: AbstractRepo<Trip>() {
 
@@ -40,6 +41,28 @@ class TripRepo: AbstractRepo<Trip>() {
                 Results.Success(data = data, code = Results.Success.CODE.LOAD_SUCCESS)
             }
         } catch (e: Exception) {
+            Results.Error(e)
+        } finally {
+            session?.close()
+        }
+    }
+
+    suspend fun deleteTrip(tripId: Int): Results{
+        var session: Session? = null
+        var trans: Transaction? = null
+        return try {
+            withContext(Dispatchers.Default) {
+                session = sessionFactory!!.openSession()
+                trans = session!!.beginTransaction()
+                val strqry = "DELETE FROM tbljoblogistics WHERE id=:tripId"
+                val data = session!!.createNativeQuery(strqry, Trip::class.java)
+                    .setParameter("tripId", tripId).executeUpdate()
+
+                trans?.commit()
+                Results.Success(data = data, code = Results.Success.CODE.DELETE_SUCCESS)
+            }
+        } catch (e: Exception) {
+            trans?.rollback()
             Results.Error(e)
         } finally {
             session?.close()

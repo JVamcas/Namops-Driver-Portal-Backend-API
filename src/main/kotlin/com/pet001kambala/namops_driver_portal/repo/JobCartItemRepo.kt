@@ -1,6 +1,7 @@
 package com.pet001kambala.namops_driver_portal.repo
 
 import com.pet001kambala.namops_driver_portal.model.JobCardItem
+import com.pet001kambala.namops_driver_portal.model.Trip
 import com.pet001kambala.namops_driver_portal.utils.Results
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -87,7 +88,10 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
         }
     }
 
-    suspend fun batchUpdate(wasPickedUp: Boolean, jobCardComplete: Boolean, jobCardItems: List<JobCardItem>): Results {
+    suspend fun batchUpdate(
+        trip: Trip,
+        jobCardNo: String? = null
+    ): Results {
         var session: Session? = null
         var trans: Transaction? = null
 
@@ -96,21 +100,32 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
                 session = sessionFactory!!.openSession()
                 trans = session!!.beginTransaction()
 
-                val strqry =
-                    "UPDATE jobcarditem j set j.wasPickepUp=:wasPickedUp WHERE j.jobCardNo=:jobCardNo and j.containerNo in(:list)"
-                val strWer =
-                    "update jobcarditem as card,(select t.wasPickepUp from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
-                            "set card.jobCardCompleted=(IF(false in(temp.wasPickepUp),false,true)) where card.jobCardNo=:jobCardNo"
+                val strqry = //whether or not the container was picked up
+                    "UPDATE jobcarditem j set j.wasPickepUp=true WHERE j.containerNo in(:list)"
 
-                val jobCardNo = jobCardItems.first().jobCardNo
+                val strDroppedOff = //whether or not the container was dropped off up
+                    "UPDATE jobcarditem j set j.wasDroppedOff=true WHERE j.containerNo in(:list)"
+
+                val strWer =//set that the jobcard is complete if all the containers on it were dropped off
+                    "update jobcarditem as card,(select t.wasDroppedOff from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
+                            "set card.jobCardCompleted=(IF(false in(temp.wasDroppedOff),false,true)) where card.jobCardNo=:jobCardNo"
+
+                //todo there is a caveat here, need to make sure drop of date for all container is non-null
+
+                val pickedUp = listOfNotNull(trip.container1, trip.container2, trip.container3)
 
                 session!!.createNativeQuery(strqry, JobCardItem::class.java)
-                    .setParameter("list", jobCardItems.mapNotNull { it.containerNo }.toList())
-                    .setParameter("wasPickedUp", wasPickedUp)
-                    .setParameter("jobCardNo", jobCardNo).executeUpdate()
+                    .setParameter("list", pickedUp).executeUpdate()
 
-                session!!.createNativeQuery(strWer, JobCardItem::class.java)
-                    .setParameter("jobCardNo",jobCardNo)
+                jobCardNo?.let {
+                    session!!.createNativeQuery(strWer, JobCardItem::class.java)
+                        .setParameter("jobCardNo", jobCardNo).executeUpdate()
+                }
+
+                trip.dropOffDate?.let {
+                    session!!.createNativeQuery(strDroppedOff, JobCardItem::class.java)
+                        .setParameter("list", pickedUp).executeUpdate()
+                }
 
                 trans!!.commit()
 

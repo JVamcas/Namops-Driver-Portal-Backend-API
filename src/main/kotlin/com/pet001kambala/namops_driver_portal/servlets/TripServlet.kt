@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "Trips", value = ["/trip", "/trip_update", "/recent_incomplete_trip"])
+@WebServlet(name = "Trips", value = ["/trip", "/trip_update", "/recent_incomplete_trip","/trip_delete"])
 class TripServlet : HttpServlet() {
 
     private var repo: TripRepo = TripRepo()
@@ -61,9 +61,6 @@ class TripServlet : HttpServlet() {
             val passcode = req.getParameter("passcode")
             val surname = req.getParameter("surname")
             val jsonTrip = req.getParameter("trip")
-            val jsonJobCardItems = req.getParameter("job_card_items")
-            val wasPickedUp = req.getParameter("wasPickedUp")?.toBoolean() ?: false
-            val jobCardComplete = req.getParameter("jobCardComplete")?.toBoolean() ?: false
 
             val uri = req.requestURI.substring(req.contextPath.length)
 
@@ -75,52 +72,42 @@ class TripServlet : HttpServlet() {
                             val trip = jsonTrip.convert<Trip>()
                             result = repo.addNewModel(trip)
                             if (result is Results.Success<*>)
-                                out.print("{Status:\"Success\", data: ${(result as Results.Success<*>).data.toJson()}}")
+                                out.print("{Status:\"Success\", data: ${result.data.toJson()}}")
                             else out.print("{Status: \"Server Error\"}")
                         }
                         "/trip_update" -> {
-
-                            //update jobCardItems was picked up or jobCard complete
-
-                            jsonJobCardItems?.let {
-                                val jobCardItemList = jsonJobCardItems.convert<List<JobCardItem>>()
-
-                                val loadJobCardItemResults =
-                                    JobCartItemRepo().batchUpdate(
-                                        wasPickedUp = wasPickedUp,
-                                        jobCardComplete = jobCardComplete,
-                                        jobCardItems = jobCardItemList
-                                    )
-                                if (loadJobCardItemResults is Results.Error) {
-                                    out.print("{Status: \"Server Error\"}")
-                                    return@runBlocking //quit whole op if error occurred
-                                }
-                            }
 
                             val trip = jsonTrip.convert<Trip>()
 
                             result = if (trip.id == null) repo.addNewModel(trip) else repo.updateModel(trip)
 
+                            if (result is Results.Success<*>) {
+                                val jobCardNo = listOfNotNull(
+                                    trip.container1JobCardId,
+                                    trip.container2JobCardId,
+                                    trip.container3JobCardId
+                                ).firstOrNull { it.toLowerCase() != "ja000" }
+                                result = JobCartItemRepo().batchUpdate(trip = trip, jobCardNo = jobCardNo)
+                                if (result is Results.Success<*>)
+                                    out.print("{Status:\"Success\",data: ${trip.toJson()}}")
+                                else out.print("{Status: \"Server Error\"}")
+                            } else out.print("{Status: \"Server Error\"}")
+                        }
+
+                        "/trip_delete" -> {
+                            val trip = jsonTrip.convert<Trip>()
+                            result = repo.deleteTrip(tripId = trip.id ?: -1)
                             if (result is Results.Success<*>)
-                                out.print("{Status:\"Success\",data: ${result.data.toJson()}}")
+                                out.print("{Status:\"Success\"}")
                             else out.print("{Status: \"Server Error\"}")
                         }
-                        else -> {
-                            out.print("{Status: \"Invalid path\"}")
-                        }
+                        else -> out.print("{Status: \"Invalid path\"}")
                     }
                 } else out.print("{Status: \"Invalid Auth\"}")
             }
         } catch (e: Exception) {
             e.printStackTrace()
             out.print("{Status: \"Server Error\"}")
-        }
-    }
-
-    public override fun doDelete(req: HttpServletRequest, resp: HttpServletResponse) {
-        val id = req.getParameter("id")
-        runBlocking {
-
         }
     }
 }

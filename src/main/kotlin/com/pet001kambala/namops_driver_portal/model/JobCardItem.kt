@@ -64,5 +64,8 @@ class JobCardItem
     @Column(name="lngAgent")
     var lngAgent: Int? = null
 
+    @Column(name="wasDroppedOff")
+    var wasDroppedOff: Boolean = false
+
 
 }
