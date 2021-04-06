@@ -3,6 +3,7 @@ package com.pet001kambala.namops_driver_portal.servlets
 import com.pet001kambala.namops_driver_portal.model.Driver
 import com.pet001kambala.namops_driver_portal.model.JobCardItem
 import com.pet001kambala.namops_driver_portal.model.Trip
+import com.pet001kambala.namops_driver_portal.model.TripStatus
 import com.pet001kambala.namops_driver_portal.repo.DriverRepo
 import com.pet001kambala.namops_driver_portal.repo.JobCartItemRepo
 import com.pet001kambala.namops_driver_portal.repo.TripRepo
@@ -15,7 +16,10 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "Trips", value = ["/trip", "/trip_update", "/recent_incomplete_trip","/trip_delete"])
+@WebServlet(
+    name = "Trips",
+    value = ["/trip", "/trip_update", "/recent_incomplete_trip", "/trip_delete", "/trip_on_jobCard"]
+)
 class TripServlet : HttpServlet() {
 
     private var repo: TripRepo = TripRepo()
@@ -41,6 +45,14 @@ class TripServlet : HttpServlet() {
                                     out.print("{Status:\"Success\",data:${data[0].toJson()}}")
                                 else out.print("{Status: \"No Data\"}")
                             } else out.print("{Status: \"Server Error\"}")
+                        }
+                        "/trip_on_jobCard" -> {
+                            val jobCardNo = req.getParameter("jobCardNo")
+                            if (jobCardNo.isNullOrEmpty())
+                                out.print("{Status: \"Invalid request\"}")
+                            else {
+                                result = repo.loadTripByJobCard(jobCardNo)
+                            }
                         }
                         else -> out.print("{Status: \"Invalid path\"}")
                     }
@@ -78,6 +90,29 @@ class TripServlet : HttpServlet() {
                         "/trip_update" -> {
 
                             val trip = jsonTrip.convert<Trip>()
+
+                            //if there are unknown container picked up, create a jobCardItem for each and add to database
+                            val jobCartItemRepo = JobCartItemRepo()
+
+                            listOfNotNull(
+                                trip.container1 to trip.container1JobCardId,
+                                trip.container2 to trip.container2JobCardId,
+                                trip.container3 to trip.container3JobCardId
+                            ).filter { it.second?.toLowerCase() == "ja000" }
+                                .map {
+                                    JobCardItem().apply {
+                                        jobCardNo = it.second
+                                        containerNo = it.first
+                                        driver = trip.driver
+                                        wasPickedUp = true
+                                        wasDroppedOff = true
+                                        jobCardCompleted = true
+                                        pickUpLocationName = trip.pickUpLocationName
+                                    }
+                                }.forEach {
+                                    if (trip.tripStatus == TripStatus.COMPLETED)
+                                        jobCartItemRepo.addNewModel(it)
+                                }
 
                             result = if (trip.id == null) repo.addNewModel(trip) else repo.updateModel(trip)
 

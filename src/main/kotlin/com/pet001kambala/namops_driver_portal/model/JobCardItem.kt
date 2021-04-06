@@ -16,12 +16,12 @@ class JobCardItem
     var id: Int? = null
 
     @Column(name = "jobCardNo", nullable = false)
-    val jobCardNo: String? = null
+    var jobCardNo: String? = null
 
     @Column(name = "containerNo", nullable = false)
-    val containerNo: String? = null
+    var containerNo: String? = null
 
-    @Column(name = "containerSize", nullable = false)
+    @Column(name = "containerSize", nullable = true)
     val containerSize: String? = null
 
     @Column(name = "isFull", nullable = false)
@@ -35,7 +35,7 @@ class JobCardItem
     var driver: Driver? = null
 
     @Column(name = "wasPickepUp", nullable = false)
-    val wasPickedUp: Boolean = false // whether or not the job card item is completed so as not to include it again.
+    var wasPickedUp: Boolean = false // whether or not the job card item is completed so as not to include it again.
 
     @Column(name = "designatedPickUpDate", nullable = true)
     var designatePickUpDate: LocalDateTime? = null
@@ -66,6 +66,5 @@ class JobCardItem
 
     @Column(name="wasDroppedOff")
     var wasDroppedOff: Boolean = false
-
 
 }

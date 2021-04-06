@@ -106,7 +106,7 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
                 val strDroppedOff = //whether or not the container was dropped off up
                     "UPDATE jobcarditem j set j.wasDroppedOff=true WHERE j.containerNo in(:list)"
 
-                val strWer =//set that the jobcard is complete if all the containers on it were dropped off
+                val strJobCardCompleted =//set that the jobcard is complete if all the containers on it were dropped off
                     "update jobcarditem as card,(select t.wasDroppedOff from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
                             "set card.jobCardCompleted=(IF(false in(temp.wasDroppedOff),false,true)) where card.jobCardNo=:jobCardNo"
 
@@ -117,14 +117,14 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
                 session!!.createNativeQuery(strqry, JobCardItem::class.java)
                     .setParameter("list", pickedUp).executeUpdate()
 
-                jobCardNo?.let {
-                    session!!.createNativeQuery(strWer, JobCardItem::class.java)
-                        .setParameter("jobCardNo", jobCardNo).executeUpdate()
-                }
-
                 trip.dropOffDate?.let {
                     session!!.createNativeQuery(strDroppedOff, JobCardItem::class.java)
                         .setParameter("list", pickedUp).executeUpdate()
+                }
+
+                jobCardNo?.let {
+                    session!!.createNativeQuery(strJobCardCompleted, JobCardItem::class.java)
+                        .setParameter("jobCardNo", jobCardNo).executeUpdate()
                 }
 
                 trans!!.commit()
