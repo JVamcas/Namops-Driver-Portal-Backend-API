@@ -19,6 +19,8 @@ object SessionManager {
 
                 val meta = metaSrc.metadataBuilder.build()
                 newInstance = meta.sessionFactoryBuilder.build()
+
+
             }
         } catch (e: Exception) {
             shutDown()

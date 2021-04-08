@@ -94,6 +94,7 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
     ): Results {
         var session: Session? = null
         var trans: Transaction? = null
+        var trans2: Transaction? = null
 
         return try {
             withContext(Dispatchers.Default) {
@@ -101,37 +102,59 @@ class JobCartItemRepo : AbstractRepo<JobCardItem>() {
                 trans = session!!.beginTransaction()
 
                 val strqry = //whether or not the container was picked up
-                    "UPDATE jobcarditem j set j.wasPickepUp=true WHERE j.containerNo in(:list)"
+                    "UPDATE jobcarditem j set j.wasPickepUp=true WHERE j.containerNo in(:list) AND j.jobCardNo=:jobCardNo"
 
                 val strDroppedOff = //whether or not the container was dropped off up
-                    "UPDATE jobcarditem j set j.wasDroppedOff=true WHERE j.containerNo in(:list)"
+                    "UPDATE jobcarditem j set j.wasDroppedOff=true WHERE j.containerNo in(:list) AND j.jobCardNo=:jobCardNo"
 
-                val strJobCardCompleted =//set that the jobcard is complete if all the containers on it were dropped off
-                    "update jobcarditem as card,(select t.wasDroppedOff from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
-                            "set card.jobCardCompleted=(IF(false in(temp.wasDroppedOff),false,true)) where card.jobCardNo=:jobCardNo"
+                val strCompletedJobCard = "UPDATE jobcarditem j set j.jobCardCompleted=true WHERE j.containerNo in(:list) AND j.jobCardNo=:jobCardNo"
+
+//                val strJobCardCompleted =//set that the jobcard is complete if all the containers on it were dropped off
+//                    "update jobcarditem as card,(select t.wasDroppedOff from jobcarditem t where t.jobCardNo=:jobCardNo) as temp " +
+//                            "set card.jobCardCompleted=(IF(false in(temp.wasDroppedOff),false,true)) where card.jobCardNo=:jobCardNo"
 
                 //todo there is a caveat here, need to make sure drop of date for all container is non-null
 
                 val pickedUp = listOfNotNull(trip.container1, trip.container2, trip.container3)
 
-                session!!.createNativeQuery(strqry, JobCardItem::class.java)
-                    .setParameter("list", pickedUp).executeUpdate()
+                trip.actualPickUpDate?.let { //if pickup date is non-null, these containers were picked up
+                    session!!.createNativeQuery(strqry, JobCardItem::class.java)
+                        .setParameter("list", pickedUp)
+                        .setParameter("jobCardNo",jobCardNo)
+                        .executeUpdate()
 
-                trip.dropOffDate?.let {
+                }
+
+                trip.dropOffDate?.let { //if drop-off date is non-null, these containers were dropped-off
                     session!!.createNativeQuery(strDroppedOff, JobCardItem::class.java)
-                        .setParameter("list", pickedUp).executeUpdate()
+                        .setParameter("list", pickedUp)
+                        .setParameter("jobCardNo",jobCardNo)
+                        .executeUpdate()
                 }
-
-                jobCardNo?.let {
-                    session!!.createNativeQuery(strJobCardCompleted, JobCardItem::class.java)
-                        .setParameter("jobCardNo", jobCardNo).executeUpdate()
-                }
-
                 trans!!.commit()
 
+                jobCardNo?.let {
+                    when (val results = findJobCardItemByJobCardNo(jobCardNo = jobCardNo)) {
+                        is Results.Success<*> -> {
+                            val allContainers = (results.data as ArrayList<JobCardItem>).mapNotNull { it.containerNo }.toList()
+                            val notDroppedOff  = results.data.filterNot { it.wasDroppedOff }
+                            if(notDroppedOff.isNullOrEmpty()){ // if all the containers on this job card where dropped off
+//                                session = sessionFactory!!.openSession()
+                                trans2 = session!!.beginTransaction()
+                                session!!.createNativeQuery(strCompletedJobCard, JobCardItem::class.java)
+                                    .setParameter("list", allContainers)
+                                    .setParameter("jobCardNo", jobCardNo).executeUpdate()
+                                trans!!.commit()
+                            }
+                        }
+                        else -> throw Exception("Exception occurred while findJobCardItemByJobCardNo")
+                    }
+                }
                 Results.Success<JobCardItem>(code = Results.Success.CODE.UPDATE_SUCCESS)
             }
         } catch (e: Exception) {
+            e.printStackTrace()
+            trans2?.rollback()
             trans?.rollback()
             Results.Error(e)
         } finally {

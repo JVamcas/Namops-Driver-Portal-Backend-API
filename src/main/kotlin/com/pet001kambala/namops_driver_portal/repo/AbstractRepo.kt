@@ -6,6 +6,7 @@ import com.pet001kambala.namops_driver_portal.utils.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.hibernate.Session
+import java.util.*
 
 abstract class AbstractRepo<T> {
 
@@ -15,7 +16,9 @@ abstract class AbstractRepo<T> {
         var session: Session? = null;
         return try {
             withContext(Dispatchers.Default) {
-                session = sessionFactory!!.openSession()
+                session = sessionFactory!!.withOptions()
+                    .jdbcTimeZone(TimeZone.getTimeZone("GMT+2"))
+                    .openSession()
                 val transaction = session!!.beginTransaction()
                 session!!.persist(model)
                 transaction.commit()
@@ -35,7 +38,10 @@ abstract class AbstractRepo<T> {
         var session: Session? = null
         return try {
             withContext(Dispatchers.Default) {
-                session = sessionFactory!!.openSession()
+                session = sessionFactory!!.withOptions()
+                    .jdbcTimeZone(TimeZone.getTimeZone("GMT+2"))
+                    .openSession()
+
                 val transaction = session!!.beginTransaction()
                 session!!.update(model)
                 transaction.commit()
